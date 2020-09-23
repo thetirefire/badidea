@@ -13,3 +13,9 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# etcd data directory
+default.etcd
+
+# apiserver cert directory
+apiserver.local.config
