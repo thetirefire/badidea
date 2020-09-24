@@ -16,144 +16,103 @@ package server
 import (
 	"fmt"
 	"io"
-	"net"
+	"os"
+	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/thetirefire/badidea/apis/badidea/v1alpha1"
-	"github.com/thetirefire/badidea/apiserver"
-	badideaopenapi "github.com/thetirefire/badidea/pkg/generated/openapi"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apiserver/pkg/endpoints/openapi"
-	"k8s.io/apiserver/pkg/features"
+	"k8s.io/apimachinery/pkg/util/sets"
+	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	genericoptions "k8s.io/apiserver/pkg/server/options"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/apiserver/pkg/server/filters"
+	clientgoinformers "k8s.io/client-go/informers"
+	clientgofake "k8s.io/client-go/kubernetes/fake"
+	aggregatorapiserver "k8s.io/kube-aggregator/pkg/apiserver"
+	aggregatorscheme "k8s.io/kube-aggregator/pkg/apiserver/scheme"
+	aggregatorserver "k8s.io/kube-aggregator/pkg/cmd/server"
+	aggregatoropenapi "k8s.io/kube-aggregator/pkg/generated/openapi"
 )
-
-const defaultEtcdPathPrefix = "/registry/badidea.x-k8s.io"
 
 // BadIdeaServerOptions contains state for master/api server.
 type BadIdeaServerOptions struct {
-	RecommendedOptions *genericoptions.RecommendedOptions
-
 	// SharedInformerFactory informers.SharedInformerFactory
 	StdOut io.Writer
 	StdErr io.Writer
 }
 
-// NewBadIdeaServerOptions returns a new BadIdeaServerOptions.
-func NewBadIdeaServerOptions(out, errOut io.Writer) *BadIdeaServerOptions {
-	o := &BadIdeaServerOptions{
-		RecommendedOptions: genericoptions.NewRecommendedOptions(
-			defaultEtcdPathPrefix,
-			apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion),
-		),
-
-		StdOut: out,
-		StdErr: errOut,
-	}
-	o.RecommendedOptions.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(v1alpha1.SchemeGroupVersion, schema.GroupKind{Group: v1alpha1.GroupName})
-
-	return o
+// RunBadIdeaServer starts a new BadIdeaServer given BadIdeaServerOptions.
+func (o BadIdeaServerOptions) RunBadIdeaServer(stopCh <-chan struct{}) error {
+	// TODO: Add apiextensions server
+	// TODO: Add badidea server
+	return RunAggregator(stopCh)
 }
 
-// NewCommandStartBadIdeaServer provides a CLI handler for 'start master' command
-// with a default BadIdeaServerOptions.
-func NewCommandStartBadIdeaServer(defaults *BadIdeaServerOptions, stopCh <-chan struct{}) *cobra.Command {
-	o := *defaults
-	cmd := &cobra.Command{
-		Short: "Launch a badidea API server",
-		Long:  "Launch a badidea API server",
-		RunE: func(c *cobra.Command, args []string) error {
-			if err := o.Complete(); err != nil {
-				return err
-			}
-			if err := o.Validate(args); err != nil {
-				return err
-			}
-			if err := o.RunBadIdeaServer(stopCh); err != nil {
-				return err
-			}
+// RunAggregator runs the API Aggregator.
+func RunAggregator(stopCh <-chan struct{}) error {
+	o := aggregatorserver.NewDefaultOptions(os.Stdout, os.Stderr)
 
-			return nil
-		},
-	}
-
-	// flags := cmd.Flags()
-	// o.RecommendedOptions.AddFlags(flags)
-	// utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
-
-	return cmd
-}
-
-// Validate validates BadIdeaServerOptions.
-func (o BadIdeaServerOptions) Validate(args []string) error {
-	errors := []error{}
-	errors = append(errors, o.RecommendedOptions.Validate()...)
-
-	return utilerrors.NewAggregate(errors)
-}
-
-// Complete fills in fields required to have valid data.
-func (o *BadIdeaServerOptions) Complete() error {
-	o.RecommendedOptions.Etcd.StorageConfig.Transport.ServerList = []string{"127.0.0.1:2379"}
+	o.RecommendedOptions.Etcd.StorageConfig.Transport.ServerList = []string{"http://127.0.0.1:2379"}
+	o.RecommendedOptions.SecureServing.BindPort = 6443
 	o.RecommendedOptions.Authentication.RemoteKubeConfigFileOptional = true
 	o.RecommendedOptions.Authorization.RemoteKubeConfigFileOptional = true
-	o.RecommendedOptions.Audit = nil
+	o.RecommendedOptions.Authorization.AlwaysAllowPaths = []string{"*"}
+	o.RecommendedOptions.Authorization.AlwaysAllowGroups = []string{"*"}
 	o.RecommendedOptions.CoreAPI = nil
 	o.RecommendedOptions.Admission = nil
 
-	return nil
-}
-
-// Config returns config for the api server given BadIdeaServerOptions.
-func (o *BadIdeaServerOptions) Config() (*apiserver.Config, error) {
-	// TODO have a "real" external address
-	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
-		return nil, fmt.Errorf("error creating self-signed certificates: %w", err)
+	if err := o.Validate(nil); err != nil {
+		return err
 	}
 
-	o.RecommendedOptions.SecureServing.BindPort = 6443
+	if err := o.Complete(); err != nil {
+		return err
+	}
 
-	o.RecommendedOptions.Etcd.StorageConfig.Paging = utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)
+	// TODO have a "real" external address
+	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, nil); err != nil {
+		return fmt.Errorf("error creating self-signed certificates: %w", err)
+	}
 
-	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
-	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(badideaopenapi.GetOpenAPIDefinitions, openapi.NewDefinitionNamer(apiserver.Scheme))
-	serverConfig.OpenAPIConfig.Info.Title = "BadIdea"
-	serverConfig.OpenAPIConfig.Info.Version = "0.1"
+	serverConfig := genericapiserver.NewRecommendedConfig(aggregatorscheme.Codecs)
+
+	if err := o.ServerRunOptions.ApplyTo(&serverConfig.Config); err != nil {
+		return err
+	}
 
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
-		return nil, err
+		return err
 	}
 
-	config := &apiserver.Config{
+	if err := o.APIEnablement.ApplyTo(&serverConfig.Config, aggregatorapiserver.DefaultAPIResourceConfigSource(), aggregatorscheme.Scheme); err != nil {
+		return err
+	}
+
+	// TODO: fake it until we make it
+	serverConfig.SharedInformerFactory = clientgoinformers.NewSharedInformerFactory(clientgofake.NewSimpleClientset(), 10*time.Minute)
+
+	serverConfig.LongRunningFunc = filters.BasicLongRunningRequestCheck(
+		sets.NewString("watch"),
+		sets.NewString(),
+	)
+	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(aggregatoropenapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(aggregatorscheme.Scheme))
+	serverConfig.OpenAPIConfig.Info.Title = "kube-aggregator"
+
+	serviceResolver := aggregatorapiserver.NewClusterIPServiceResolver(serverConfig.SharedInformerFactory.Core().V1().Services().Lister())
+
+	config := aggregatorapiserver.Config{
 		GenericConfig: serverConfig,
-		ExtraConfig:   apiserver.ExtraConfig{},
+		ExtraConfig: aggregatorapiserver.ExtraConfig{
+			ServiceResolver: serviceResolver,
+		},
 	}
 
-	return config, nil
-}
-
-// RunBadIdeaServer starts a new BadIdeaServer given BadIdeaServerOptions.
-func (o BadIdeaServerOptions) RunBadIdeaServer(stopCh <-chan struct{}) error {
-	config, err := o.Config()
+	server, err := config.Complete().NewWithDelegate(genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return err
 	}
 
-	server, err := config.Complete().New()
+	prepared, err := server.PrepareRun()
 	if err != nil {
 		return err
 	}
 
-	// server.GenericAPIServer.AddPostStartHookOrDie("start-badidea-informers", func(context genericapiserver.PostStartHookContext) error {
-	// 	config.GenericConfig.SharedInformerFactory.Start(context.StopCh)
-	// 	o.SharedInformerFactory.Start(context.StopCh)
-
-	// 	return nil
-	// })
-
-	return server.GenericAPIServer.PrepareRun().Run(stopCh)
+	return prepared.Run(stopCh)
 }

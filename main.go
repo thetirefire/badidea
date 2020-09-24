@@ -27,11 +27,13 @@ func main() {
 	defer logs.FlushLogs()
 
 	stopCh := genericapiserver.SetupSignalHandler()
-	options := server.NewBadIdeaServerOptions(os.Stdout, os.Stderr)
-	cmd := server.NewCommandStartBadIdeaServer(options, stopCh)
-	// cmd.Flags().AddGoFlagSet(flag.CommandLine)
 
-	if err := cmd.Execute(); err != nil {
+	o := &server.BadIdeaServerOptions{
+		StdOut: os.Stdout,
+		StdErr: os.Stderr,
+	}
+
+	if err := o.RunBadIdeaServer(stopCh); err != nil {
 		klog.Fatal(err)
 	}
 }
