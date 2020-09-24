@@ -14,7 +14,6 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"os"
 
 	"github.com/thetirefire/badidea/cmd/server"
@@ -30,7 +29,7 @@ func main() {
 	stopCh := genericapiserver.SetupSignalHandler()
 	options := server.NewBadIdeaServerOptions(os.Stdout, os.Stderr)
 	cmd := server.NewCommandStartBadIdeaServer(options, stopCh)
-	cmd.Flags().AddGoFlagSet(flag.CommandLine)
+	// cmd.Flags().AddGoFlagSet(flag.CommandLine)
 
 	if err := cmd.Execute(); err != nil {
 		klog.Fatal(err)

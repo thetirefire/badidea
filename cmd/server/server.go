@@ -81,9 +81,9 @@ func NewCommandStartBadIdeaServer(defaults *BadIdeaServerOptions, stopCh <-chan 
 		},
 	}
 
-	flags := cmd.Flags()
-	o.RecommendedOptions.AddFlags(flags)
-	utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
+	// flags := cmd.Flags()
+	// o.RecommendedOptions.AddFlags(flags)
+	// utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
 
 	return cmd
 }
@@ -98,6 +98,13 @@ func (o BadIdeaServerOptions) Validate(args []string) error {
 
 // Complete fills in fields required to have valid data.
 func (o *BadIdeaServerOptions) Complete() error {
+	o.RecommendedOptions.Etcd.StorageConfig.Transport.ServerList = []string{"127.0.0.1:2379"}
+	o.RecommendedOptions.Authentication.RemoteKubeConfigFileOptional = true
+	o.RecommendedOptions.Authorization.RemoteKubeConfigFileOptional = true
+	o.RecommendedOptions.Audit = nil
+	o.RecommendedOptions.CoreAPI = nil
+	o.RecommendedOptions.Admission = nil
+
 	return nil
 }
 
@@ -108,10 +115,11 @@ func (o *BadIdeaServerOptions) Config() (*apiserver.Config, error) {
 		return nil, fmt.Errorf("error creating self-signed certificates: %w", err)
 	}
 
+	o.RecommendedOptions.SecureServing.BindPort = 6443
+
 	o.RecommendedOptions.Etcd.StorageConfig.Paging = utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
-
 	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(badideaopenapi.GetOpenAPIDefinitions, openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIConfig.Info.Title = "BadIdea"
 	serverConfig.OpenAPIConfig.Info.Version = "0.1"
