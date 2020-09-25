@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package app does all of the work necessary to create a Kubernetes
-// APIServer by binding together the API, master and APIServer infrastructure.
-// It can be configured and called directly or via the hyperkube framework.
 package apiserver
 
 import (
@@ -28,8 +25,8 @@ import (
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/filters"
-	clientgoinformers "k8s.io/client-go/informers"
-	clientgofake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
 	aggregatorapiserver "k8s.io/kube-aggregator/pkg/apiserver"
 	aggregatorscheme "k8s.io/kube-aggregator/pkg/apiserver/scheme"
 	aggregatorserver "k8s.io/kube-aggregator/pkg/cmd/server"
@@ -77,7 +74,7 @@ func CreateAggregator(delegationTarget genericapiserver.DelegationTarget) (*aggr
 	}
 
 	// TODO: fake it until we make it
-	serverConfig.SharedInformerFactory = clientgoinformers.NewSharedInformerFactory(clientgofake.NewSimpleClientset(), 10*time.Minute)
+	serverConfig.SharedInformerFactory = informers.NewSharedInformerFactory(fake.NewSimpleClientset(), 10*time.Minute)
 
 	serverConfig.LongRunningFunc = filters.BasicLongRunningRequestCheck(
 		sets.NewString("watch"),
