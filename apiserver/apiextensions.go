@@ -26,46 +26,45 @@ import (
 	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
 	apiextensionsserveroptions "k8s.io/apiextensions-apiserver/pkg/cmd/server/options"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/util/proxy"
-	"k8s.io/apiserver/pkg/util/webhook"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1 "k8s.io/client-go/listers/core/v1"
 )
 
 // CreateExtensions creates the Exensions Server.
-func CreateExtensions() (*apiextensionsapiserver.CustomResourceDefinitions, error) {
+func CreateExtensions() (genericapiserver.Config, genericoptions.EtcdOptions, *apiextensionsapiserver.CustomResourceDefinitions, error) {
 	o := apiextensionsserveroptions.NewCustomResourceDefinitionsServerOptions(os.Stdout, os.Stderr)
-
 	o.RecommendedOptions.Etcd.StorageConfig.Transport.ServerList = []string{"http://127.0.0.1:2379"}
-	o.RecommendedOptions.SecureServing.BindPort = 8443
+	o.RecommendedOptions.SecureServing.BindPort = 6443
 	o.RecommendedOptions.Authentication.RemoteKubeConfigFileOptional = true
 	o.RecommendedOptions.Authorization.RemoteKubeConfigFileOptional = true
 	o.RecommendedOptions.Authorization.AlwaysAllowPaths = []string{"*"}
-	o.RecommendedOptions.Authorization.AlwaysAllowGroups = []string{"*"}
+	o.RecommendedOptions.Authorization.AlwaysAllowGroups = []string{"system:unauthenticated"}
 	o.RecommendedOptions.CoreAPI = nil
 	o.RecommendedOptions.Admission = nil
 
 	if err := o.Complete(); err != nil {
-		return nil, err
+		return genericapiserver.Config{}, *o.RecommendedOptions.Etcd, nil, err
 	}
 
 	if err := o.Validate(); err != nil {
-		return nil, err
+		return genericapiserver.Config{}, *o.RecommendedOptions.Etcd, nil, err
 	}
 
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
-		return nil, fmt.Errorf("error creating self-signed certificates: %w", err)
+		return genericapiserver.Config{}, *o.RecommendedOptions.Etcd, nil, fmt.Errorf("error creating self-signed certificates: %w", err)
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiextensionsapiserver.Codecs)
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
-		return nil, err
+		return genericapiserver.Config{}, *o.RecommendedOptions.Etcd, nil, err
 	}
 
 	if err := o.APIEnablement.ApplyTo(&serverConfig.Config, apiextensionsapiserver.DefaultAPIResourceConfigSource(), apiextensionsapiserver.Scheme); err != nil {
-		return nil, err
+		return serverConfig.Config, *o.RecommendedOptions.Etcd, nil, err
 	}
 
 	// TODO: fake it until we make it
@@ -76,11 +75,16 @@ func CreateExtensions() (*apiextensionsapiserver.CustomResourceDefinitions, erro
 		ExtraConfig: apiextensionsapiserver.ExtraConfig{
 			CRDRESTOptionsGetter: apiextensionsserveroptions.NewCRDRESTOptionsGetter(*o.RecommendedOptions.Etcd),
 			ServiceResolver:      &serviceResolver{serverConfig.SharedInformerFactory.Core().V1().Services().Lister()},
-			AuthResolverWrapper:  webhook.NewDefaultAuthenticationInfoResolverWrapper(nil, nil, serverConfig.LoopbackClientConfig),
+			//AuthResolverWrapper:  webhook.NewDefaultAuthenticationInfoResolverWrapper(nil, nil, serverConfig.LoopbackClientConfig),
 		},
 	}
 
-	return config.Complete().New(genericapiserver.NewEmptyDelegate())
+	server, err := config.Complete().New(genericapiserver.NewEmptyDelegate())
+	if err != nil {
+		return serverConfig.Config, *o.RecommendedOptions.Etcd, nil, err
+	}
+
+	return serverConfig.Config, *o.RecommendedOptions.Etcd, server, nil
 }
 
 type serviceResolver struct {

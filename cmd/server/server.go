@@ -17,12 +17,15 @@ import (
 	"github.com/thetirefire/badidea/apiserver"
 )
 
-// RunBadIdeaServer starts a new BadIdeaServer
+// RunBadIdeaServer starts a new BadIdeaServer.
 func RunBadIdeaServer(stopCh <-chan struct{}) error {
 	aggregatorServer, err := apiserver.CreateServerChain()
 	if err != nil {
 		return err
 	}
+
+	// TODO: kubectl create and explain currently failing on crd and apiservices resources
+	// kubectl get and describe do work, though
 
 	return apiserver.RunAggregator(aggregatorServer, stopCh)
 }

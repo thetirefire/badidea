@@ -17,11 +17,17 @@ import (
 	aggregatorapiserver "k8s.io/kube-aggregator/pkg/apiserver"
 )
 
+// CreateServerChain creates the chained aggregated server
 func CreateServerChain() (*aggregatorapiserver.APIAggregator, error) {
-	extensionServer, err := CreateExtensions()
+	genericConfig, genericEtcdOptions, extensionServer, err := CreateExtensions()
 	if err != nil {
 		return nil, err
 	}
 
-	return CreateAggregator(extensionServer.GenericAPIServer)
+	config, err := CreateAggregatorConfig(genericConfig, genericEtcdOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateAggregatorServer(config, extensionServer.GenericAPIServer, extensionServer.Informers)
 }
