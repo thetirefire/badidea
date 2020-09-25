@@ -1,5 +1,7 @@
 # badidea
 
+Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefitions
+
 ## Prerequisites
 
 - etcd binary
@@ -17,5 +19,6 @@ go run main.go
 
 ## Do the thing
 ```sh
+# username and password are ignored, but required for the command to complete
 kubectl --server https://localhost:6443 --insecure-skip-tls-verify --username=bad --password=idea <the thing>
 ```
