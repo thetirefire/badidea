@@ -24,12 +24,16 @@ import (
 	"time"
 
 	"github.com/thetirefire/badidea/controllers/crdregistration"
+	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
 	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
+	apiextensionsopenapi "k8s.io/apiextensions-apiserver/pkg/generated/openapi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/apiserver/pkg/server/filters"
 	"k8s.io/apiserver/pkg/server/healthz"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/server/resourceconfig"
@@ -45,6 +49,8 @@ import (
 	apiregistrationclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1"
 	apiregistrationinformers "k8s.io/kube-aggregator/pkg/client/informers/externalversions/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
+	aggregatoropenapi "k8s.io/kube-aggregator/pkg/generated/openapi"
+	"k8s.io/kube-openapi/pkg/common"
 )
 
 // priority defines group priority that is used in discovery. This controls
@@ -72,6 +78,23 @@ func CreateAggregatorConfig(sharedConfig genericapiserver.Config, sharedEtcdOpti
 	genericConfig := sharedConfig
 	genericConfig.PostStartHooks = map[string]genericapiserver.PostStartHookConfigEntry{}
 	genericConfig.RESTOptionsGetter = nil
+
+	getOpenAPIConfig := func(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
+		result := apiextensionsopenapi.GetOpenAPIDefinitions(ref)
+		for k, v := range aggregatoropenapi.GetOpenAPIDefinitions(ref) {
+			result[k] = v
+		}
+
+		return result
+	}
+
+	genericConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(getOpenAPIConfig, openapinamer.NewDefinitionNamer(apiextensionsapiserver.Scheme, aggregatorscheme.Scheme))
+	genericConfig.OpenAPIConfig.Info.Title = "BadIdea"
+	genericConfig.OpenAPIConfig.Info.Version = "0.1"
+	genericConfig.LongRunningFunc = filters.BasicLongRunningRequestCheck(
+		sets.NewString("watch"),
+		sets.NewString(),
+	)
 
 	// TODO: Do we need to override AdmissionControl similar to: https://github.com/kubernetes/kubernetes/blob/c7911a384cbc11a4b5003da081b181d6b814d07e/cmd/kube-apiserver/app/aggregator.go#L70-L80?
 

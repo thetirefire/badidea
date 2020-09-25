@@ -24,7 +24,7 @@ func RunBadIdeaServer(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	// TODO: kubectl create and explain currently failing on crd and apiservices resources
+	// TODO: kubectl explain currently failing on crd resources, but works on apiservices
 	// kubectl get and describe do work, though
 
 	return apiserver.RunAggregator(aggregatorServer, stopCh)

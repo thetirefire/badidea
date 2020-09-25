@@ -75,6 +75,7 @@ func CreateExtensions() (genericapiserver.Config, genericoptions.EtcdOptions, *a
 		ExtraConfig: apiextensionsapiserver.ExtraConfig{
 			CRDRESTOptionsGetter: apiextensionsserveroptions.NewCRDRESTOptionsGetter(*o.RecommendedOptions.Etcd),
 			ServiceResolver:      &serviceResolver{serverConfig.SharedInformerFactory.Core().V1().Services().Lister()},
+			MasterCount:          1,
 		},
 	}
 

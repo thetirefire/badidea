@@ -22,6 +22,11 @@ import (
 
 func main() {
 	logs.InitLogs()
+
+	// if _, err := logs.GlogSetter("8"); err != nil {
+	// 	klog.Fatal(err)
+	// }
+
 	defer logs.FlushLogs()
 
 	stopCh := genericapiserver.SetupSignalHandler()

@@ -20,4 +20,5 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.2.0
 	k8s.io/kube-aggregator v0.19.2
+	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
 )
