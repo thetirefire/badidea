@@ -14,8 +14,6 @@ limitations under the License.
 package main
 
 import (
-	"os"
-
 	"github.com/thetirefire/badidea/cmd/server"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/logs"
@@ -28,12 +26,7 @@ func main() {
 
 	stopCh := genericapiserver.SetupSignalHandler()
 
-	o := &server.BadIdeaServerOptions{
-		StdOut: os.Stdout,
-		StdErr: os.Stderr,
-	}
-
-	if err := o.RunBadIdeaServer(stopCh); err != nil {
+	if err := server.RunBadIdeaServer(stopCh); err != nil {
 		klog.Fatal(err)
 	}
 }

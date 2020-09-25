@@ -20,53 +20,76 @@ limitations under the License.
 package apiserver
 
 import (
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"fmt"
+	"net"
+	"net/url"
+	"os"
+	"time"
+
 	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
-	apiextensionsoptions "k8s.io/apiextensions-apiserver/pkg/cmd/server/options"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apiserver/pkg/features"
+	apiextensionsserveroptions "k8s.io/apiextensions-apiserver/pkg/cmd/server/options"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	genericoptions "k8s.io/apiserver/pkg/server/options"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	kubeexternalinformers "k8s.io/client-go/informers"
+	"k8s.io/apiserver/pkg/util/proxy"
+	"k8s.io/apiserver/pkg/util/webhook"
+	clientgoinformers "k8s.io/client-go/informers"
+	clientgofake "k8s.io/client-go/kubernetes/fake"
+	corev1 "k8s.io/client-go/listers/core/v1"
 )
 
-func createAPIExtensionsConfig(
-	badIdeaAPIServerConfig genericapiserver.Config,
-	externalInformers kubeexternalinformers.SharedInformerFactory,
-	commandOptions *ServerRunOptions,
-) *apiextensionsapiserver.Config {
-	// make a shallow copy to let us twiddle a few things
-	// most of the config actually remains the same.  We only need to mess with a couple items related to the particulars of the apiextensions
-	genericConfig := badIdeaAPIServerConfig
-	genericConfig.PostStartHooks = map[string]genericapiserver.PostStartHookConfigEntry{}
-	genericConfig.RESTOptionsGetter = nil
+// CreateExtensions creates the Exensions Server.
+func CreateExtensions() (*apiextensionsapiserver.CustomResourceDefinitions, error) {
+	o := apiextensionsserveroptions.NewCustomResourceDefinitionsServerOptions(os.Stdout, os.Stderr)
 
-	// copy the etcd options so we don't mutate originals.
-	etcdOptions := *commandOptions.Etcd
-	etcdOptions.StorageConfig.Paging = utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)
-	etcdOptions.StorageConfig.Codec = apiextensionsapiserver.Codecs.LegacyCodec(v1beta1.SchemeGroupVersion, v1.SchemeGroupVersion)
-	etcdOptions.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(v1beta1.SchemeGroupVersion, schema.GroupKind{Group: v1beta1.GroupName})
-	genericConfig.RESTOptionsGetter = &genericoptions.SimpleRestOptionsFactory{Options: etcdOptions}
+	o.RecommendedOptions.Etcd.StorageConfig.Transport.ServerList = []string{"http://127.0.0.1:2379"}
+	o.RecommendedOptions.SecureServing.BindPort = 8443
+	o.RecommendedOptions.Authentication.RemoteKubeConfigFileOptional = true
+	o.RecommendedOptions.Authorization.RemoteKubeConfigFileOptional = true
+	o.RecommendedOptions.Authorization.AlwaysAllowPaths = []string{"*"}
+	o.RecommendedOptions.Authorization.AlwaysAllowGroups = []string{"*"}
+	o.RecommendedOptions.CoreAPI = nil
+	o.RecommendedOptions.Admission = nil
 
-	apiextensionsConfig := &apiextensionsapiserver.Config{
-		GenericConfig: &genericapiserver.RecommendedConfig{
-			Config:                genericConfig,
-			SharedInformerFactory: externalInformers,
-		},
+	if err := o.Complete(); err != nil {
+		return nil, err
+	}
+
+	if err := o.Validate(); err != nil {
+		return nil, err
+	}
+
+	// TODO have a "real" external address
+	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
+		return nil, fmt.Errorf("error creating self-signed certificates: %w", err)
+	}
+
+	serverConfig := genericapiserver.NewRecommendedConfig(apiextensionsapiserver.Codecs)
+	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+		return nil, err
+	}
+
+	if err := o.APIEnablement.ApplyTo(&serverConfig.Config, apiextensionsapiserver.DefaultAPIResourceConfigSource(), apiextensionsapiserver.Scheme); err != nil {
+		return nil, err
+	}
+
+	// TODO: fake it until we make it
+	serverConfig.SharedInformerFactory = clientgoinformers.NewSharedInformerFactory(clientgofake.NewSimpleClientset(), 10*time.Minute)
+
+	config := &apiextensionsapiserver.Config{
+		GenericConfig: serverConfig,
 		ExtraConfig: apiextensionsapiserver.ExtraConfig{
-			CRDRESTOptionsGetter: apiextensionsoptions.NewCRDRESTOptionsGetter(etcdOptions),
+			CRDRESTOptionsGetter: apiextensionsserveroptions.NewCRDRESTOptionsGetter(*o.RecommendedOptions.Etcd),
+			ServiceResolver:      &serviceResolver{serverConfig.SharedInformerFactory.Core().V1().Services().Lister()},
+			AuthResolverWrapper:  webhook.NewDefaultAuthenticationInfoResolverWrapper(nil, nil, serverConfig.LoopbackClientConfig),
 		},
 	}
 
-	// we need to clear the poststarthooks so we don't add them multiple times to all the servers (that fails)
-	apiextensionsConfig.GenericConfig.PostStartHooks = map[string]genericapiserver.PostStartHookConfigEntry{}
-
-	return apiextensionsConfig
+	return config.Complete().New(genericapiserver.NewEmptyDelegate())
 }
 
-func createAPIExtensionsServer(apiextensionsConfig *apiextensionsapiserver.Config, delegateAPIServer genericapiserver.DelegationTarget) (*apiextensionsapiserver.CustomResourceDefinitions, error) {
-	return apiextensionsConfig.Complete().New(delegateAPIServer)
+type serviceResolver struct {
+	services corev1.ServiceLister
+}
+
+func (r *serviceResolver) ResolveEndpoint(namespace, name string, port int32) (*url.URL, error) {
+	return proxy.ResolveCluster(r.services, namespace, name, port)
 }
