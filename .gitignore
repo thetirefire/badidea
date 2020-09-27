@@ -19,3 +19,9 @@ default.etcd
 
 # apiserver cert directory
 apiserver.local.config
+
+# etcd unix sockets
+etcd-socket*
+
+# binary builds
+bin/

@@ -2,7 +2,13 @@
 
 GOBIN := $(shell go env GOPATH)/bin
 
-all: fix fmt vet lint test tidy
+all: fix fmt vet lint test tidy badidea
+
+docker:
+	docker build ./ --tag badidea:latest
+
+badidea:
+	CGO_ENABLED=0 go build -o bin/badidea ./
 
 fix:
 	go fix ./...

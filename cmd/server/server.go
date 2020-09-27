@@ -15,10 +15,16 @@ package server
 
 import (
 	"github.com/thetirefire/badidea/apiserver"
+	"github.com/thetirefire/badidea/etcd"
 )
 
 // RunBadIdeaServer starts a new BadIdeaServer.
 func RunBadIdeaServer(stopCh <-chan struct{}) error {
+	err := etcd.RunEtcdServer(stopCh)
+	if err != nil {
+		return err
+	}
+
 	aggregatorServer, err := apiserver.CreateServerChain()
 	if err != nil {
 		return err

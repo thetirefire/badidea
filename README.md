@@ -4,17 +4,16 @@ Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefiti
 
 ## Prerequisites
 
-- etcd binary
 - kubectl binary
 
-## Start the etcd server
+## Build the badidea server
 ```sh
-etcd
+make badidea
 ```
 
 ## Start the badidea server
 ```sh
-go run main.go
+bin/badidea
 ```
 
 ## Do the thing
