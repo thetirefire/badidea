@@ -6,17 +6,24 @@ Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefiti
 
 - kubectl binary
 
+## Development Prerequisites
+
+- Go v1.15+
+
 ## Build the badidea server
+
 ```sh
 make badidea
 ```
 
 ## Start the badidea server
+
 ```sh
 bin/badidea
 ```
 
 ## Do the thing
+
 ```sh
 # username and password are ignored, but required for the command to complete
 kubectl --server https://localhost:6443 --insecure-skip-tls-verify --username=bad --password=idea <the thing>
