@@ -28,3 +28,6 @@ test:
 
 vet:
 	go vet ./...
+
+clean:
+	rm -rf apiserver.local.config default.etcd bin/
