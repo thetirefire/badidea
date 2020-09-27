@@ -14,24 +14,13 @@ limitations under the License.
 package main
 
 import (
-	"github.com/thetirefire/badidea/cmd/server"
-	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/component-base/logs"
-	"k8s.io/klog/v2"
+	"os"
+
+	"github.com/thetirefire/badidea/cmd"
 )
 
 func main() {
-	logs.InitLogs()
-
-	// if _, err := logs.GlogSetter("8"); err != nil {
-	// 	klog.Fatal(err)
-	// }
-
-	defer logs.FlushLogs()
-
-	stopCh := genericapiserver.SetupSignalHandler()
-
-	if err := server.RunBadIdeaServer(stopCh); err != nil {
-		klog.Fatal(err)
+	if err := cmd.NewRootCommand().Execute(); err != nil {
+		os.Exit(1)
 	}
 }
