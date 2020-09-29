@@ -91,7 +91,8 @@ func TestHandleVersionUpdate(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			registration := &fakeAPIServiceRegistration{}
 			crdCache := cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
@@ -101,10 +102,14 @@ func TestHandleVersionUpdate(t *testing.T) {
 				apiServiceRegistration: registration,
 			}
 			for i := range test.startingCRDs {
-				crdCache.Add(test.startingCRDs[i])
+				if err := crdCache.Add(test.startingCRDs[i]); err != nil {
+					t.Errorf("%s uunexpected error: %v", test.name, err)
+				}
 			}
 
-			c.handleVersionUpdate(test.version)
+			if err := c.handleVersionUpdate(test.version); err != nil {
+				t.Errorf("%s uunexpected error: %v", test.name, err)
+			}
 
 			if !reflect.DeepEqual(test.expectedAdded, registration.added) {
 				t.Errorf("%s expected %v, got %v", test.name, test.expectedAdded, registration.added)
