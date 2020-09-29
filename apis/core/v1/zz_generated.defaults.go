@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -28,5 +29,18 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&v1.Namespace{}, func(obj interface{}) { SetObjectDefaults_Namespace(obj.(*v1.Namespace)) })
+	scheme.AddTypeDefaultingFunc(&v1.NamespaceList{}, func(obj interface{}) { SetObjectDefaults_NamespaceList(obj.(*v1.NamespaceList)) })
 	return nil
+}
+
+func SetObjectDefaults_Namespace(in *v1.Namespace) {
+	SetDefaults_NamespaceStatus(&in.Status)
+}
+
+func SetObjectDefaults_NamespaceList(in *v1.NamespaceList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_Namespace(a)
+	}
 }

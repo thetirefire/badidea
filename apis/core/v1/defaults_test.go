@@ -20,12 +20,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/thetirefire/badidea/apis/core"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func roundTrip(t *testing.T, obj runtime.Object) runtime.Object {
+	utilruntime.Must(core.AddToScheme(clientsetscheme.Scheme))
 	codec := clientsetscheme.Codecs.LegacyCodec(v1.SchemeGroupVersion)
 	data, err := runtime.Encode(codec, obj)
 	if err != nil {
