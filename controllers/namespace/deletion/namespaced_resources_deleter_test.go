@@ -72,7 +72,11 @@ func TestFinalizeNamespaceFunc(t *testing.T) {
 		nsClient:       mockClient.CoreV1().Namespaces(),
 		finalizerToken: v1.FinalizerKubernetes,
 	}
-	d.finalizeNamespace(testNamespace)
+
+	if _, err := d.finalizeNamespace(testNamespace); err != nil {
+		t.Errorf("Unexpected err: %v", err)
+	}
+
 	actions := mockClient.Actions()
 	if len(actions) != 1 {
 		t.Errorf("Expected 1 mock client action, but got %v", len(actions))
@@ -361,7 +365,7 @@ func (f *fakeActionHandler) ServeHTTP(response http.ResponseWriter, request *htt
 	f.actions = append(f.actions, fakeAction{method: request.Method, path: request.URL.Path})
 	response.Header().Set("Content-Type", runtime.ContentTypeJSON)
 	response.WriteHeader(f.statusCode)
-	response.Write([]byte("{\"apiVersion\": \"v1\", \"kind\": \"List\",\"items\":null}"))
+	_, _ = response.Write([]byte("{\"apiVersion\": \"v1\", \"kind\": \"List\",\"items\":null}"))
 }
 
 // testResources returns a mocked up set of resources across different api groups for testing namespace controller.
