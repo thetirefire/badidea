@@ -1,3 +1,5 @@
+<a href="https://godoc.org/github.com/thetirefire/badidea"><img src="https://godoc.org/github.com/thetirefire/badidea?status.svg"></a>
+
 # badidea
 
 Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefitions
