@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/thetirefire/badidea/apis/core"
+	localv1 "github.com/thetirefire/badidea/apis/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -29,6 +30,7 @@ import (
 
 func roundTrip(t *testing.T, obj runtime.Object) runtime.Object {
 	utilruntime.Must(core.AddToScheme(clientsetscheme.Scheme))
+	utilruntime.Must(localv1.AddToScheme(clientsetscheme.Scheme))
 	codec := clientsetscheme.Codecs.LegacyCodec(v1.SchemeGroupVersion)
 	data, err := runtime.Encode(codec, obj)
 	if err != nil {
