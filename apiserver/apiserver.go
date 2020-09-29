@@ -24,10 +24,20 @@ func CreateServerChain() (*aggregatorapiserver.APIAggregator, error) {
 		return nil, err
 	}
 
-	config, err := CreateAggregatorConfig(genericConfig, genericEtcdOptions)
+	coreConfig, err := CreateCoreConfig(genericConfig, genericEtcdOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	return CreateAggregatorServer(config, extensionServer.GenericAPIServer, extensionServer.Informers)
+	coreServer, err := coreConfig.Complete().NewWithDelegate(extensionServer.GenericAPIServer)
+	if err != nil {
+		return nil, err
+	}
+
+	aggregatorConfig, err := CreateAggregatorConfig(genericConfig, genericEtcdOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateAggregatorServer(aggregatorConfig, coreServer.GenericAPIServer, extensionServer.Informers)
 }
