@@ -8,6 +8,10 @@
 
 Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefitions
 
+[Presentation/Demo for SIG API Machinery on October 7, 2020](https://www.youtube.com/watch?v=n1L5a09wWas)
+
+[Slide deck](https://docs.google.com/presentation/d/1TfCrsBEgvyOQ1MGC7jBKTvyaelAYCZzl3udRjPlVmWg/edit?usp=sharing)
+
 ## Prerequisites
 
 - kubectl binary
