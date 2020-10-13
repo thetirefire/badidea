@@ -23,7 +23,9 @@ import (
 	"sync"
 	"time"
 
+	corescheme "github.com/thetirefire/badidea/apiserver/scheme"
 	"github.com/thetirefire/badidea/controllers/crdregistration"
+	coreopenapi "github.com/thetirefire/badidea/generated/openapi"
 	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
 	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 	apiextensionsopenapi "k8s.io/apiextensions-apiserver/pkg/generated/openapi"
@@ -80,7 +82,11 @@ func CreateAggregatorConfig(sharedConfig genericapiserver.Config, sharedEtcdOpti
 	genericConfig.RESTOptionsGetter = nil
 
 	getOpenAPIConfig := func(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
-		result := apiextensionsopenapi.GetOpenAPIDefinitions(ref)
+		result := coreopenapi.GetOpenAPIDefinitions(ref)
+		for k, v := range apiextensionsopenapi.GetOpenAPIDefinitions(ref) {
+			result[k] = v
+		}
+
 		for k, v := range aggregatoropenapi.GetOpenAPIDefinitions(ref) {
 			result[k] = v
 		}
@@ -88,7 +94,7 @@ func CreateAggregatorConfig(sharedConfig genericapiserver.Config, sharedEtcdOpti
 		return result
 	}
 
-	genericConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(getOpenAPIConfig, openapinamer.NewDefinitionNamer(apiextensionsapiserver.Scheme, aggregatorscheme.Scheme))
+	genericConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(getOpenAPIConfig, openapinamer.NewDefinitionNamer(corescheme.Scheme, apiextensionsapiserver.Scheme, aggregatorscheme.Scheme))
 	genericConfig.OpenAPIConfig.Info.Title = "BadIdea"
 	genericConfig.OpenAPIConfig.Info.Version = "0.1"
 	genericConfig.LongRunningFunc = filters.BasicLongRunningRequestCheck(
