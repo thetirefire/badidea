@@ -64,7 +64,7 @@ func setUp(t *testing.T) (*etcd3testing.EtcdTestServer, Config, *assert.Assertio
 	// from the storage versions of other resources in their group.
 	resourceEncodingOverrides := []schema.GroupVersionResource{}
 	resourceEncoding = resourceconfig.MergeResourceEncodingConfigs(resourceEncoding, resourceEncodingOverrides)
-	storageFactory := serverstorage.NewDefaultStorageFactory(*storageConfig, "application/vnd.kubernetes.protobuf", legacyscheme.Codecs, resourceEncoding, DefaultAPIResourceConfigSource(), nil)
+	storageFactory := serverstorage.NewDefaultStorageFactory(*storageConfig, "application/json", legacyscheme.Codecs, resourceEncoding, DefaultAPIResourceConfigSource(), nil)
 
 	etcdOptions := options.NewEtcdOptions(storageConfig)
 	// unit tests don't need watch cache and it leaks lots of goroutines with etcd testing functions during unit tests
