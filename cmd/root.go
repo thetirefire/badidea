@@ -14,11 +14,14 @@ limitations under the License.
 package cmd
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/spf13/cobra"
 	"github.com/thetirefire/badidea/server"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/logs"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -27,6 +30,7 @@ func NewRootCommand() *cobra.Command {
 		Short:   "badidea",
 		Version: "0.1",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			rand.Seed(time.Now().UnixNano())
 			logs.InitLogs()
 
 			// if _, err := logs.GlogSetter("8"); err != nil {

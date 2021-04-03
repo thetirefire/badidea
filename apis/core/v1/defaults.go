@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Kubernetes Authors.
+Copyright 2015 The Kubernetes Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -11,21 +11,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package server
+package v1
 
 import (
-	"github.com/thetirefire/badidea/apiserver"
-	"github.com/thetirefire/badidea/etcd"
-	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// RunBadIdeaServer starts a new BadIdeaServer.
-func RunBadIdeaServer(stopCh <-chan struct{}) error {
-	err := etcd.RunEtcdServer(stopCh)
-	if err != nil {
-		return err
-	}
-
-	rest.SetDefaultWarningHandler(rest.NoWarnings{})
-	return apiserver.Run(stopCh)
+func addDefaultingFuncs(scheme *runtime.Scheme) error {
+	return nil
 }

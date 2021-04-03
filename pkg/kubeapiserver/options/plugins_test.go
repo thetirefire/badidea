@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The Kubernetes Authors.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -11,21 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package server
+package options
 
 import (
-	"github.com/thetirefire/badidea/apiserver"
-	"github.com/thetirefire/badidea/etcd"
-	"k8s.io/client-go/rest"
+	"strings"
+	"testing"
 )
 
-// RunBadIdeaServer starts a new BadIdeaServer.
-func RunBadIdeaServer(stopCh <-chan struct{}) error {
-	err := etcd.RunEtcdServer(stopCh)
-	if err != nil {
-		return err
+func TestAdmissionPluginOrder(t *testing.T) {
+	// Ensure the last four admission plugins listed are webhooks, quota, and deny
+	allplugins := strings.Join(AllOrderedPlugins, ",")
+	expectSuffix := ",MutatingAdmissionWebhook,ValidatingAdmissionWebhook,AlwaysDeny"
+	if !strings.HasSuffix(allplugins, expectSuffix) {
+		t.Fatalf("AllOrderedPlugins must end with ...%s", expectSuffix)
 	}
-
-	rest.SetDefaultWarningHandler(rest.NoWarnings{})
-	return apiserver.Run(stopCh)
 }

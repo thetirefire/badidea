@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/embed"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // RunBadIdeaServer starts a new BadIdeaServer.
