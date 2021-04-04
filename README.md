@@ -36,5 +36,25 @@ bin/badidea
 
 ```sh
 # username and password are ignored, but required for the command to complete
-kubectl --server https://localhost:6443 --insecure-skip-tls-verify --username=bad --password=idea <the thing>
+cat << EOF > test.kubeconfig
+apiVersion: v1
+kind: Config
+users:
+- name: badidea
+  user:
+    username: bad
+    password: idea
+clusters:
+- name: badidea
+  cluster:
+    server: https://localhost:6443
+    insecure-skip-tls-verify: true
+contexts:
+- name: badidea
+  context:
+    cluster: badidea
+    user: badidea
+current-context: badidea
+EOF
+kubectl --kubeconfig=test.kubeconfig <the thing>
 ```
