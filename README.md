@@ -12,6 +12,8 @@ Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefiti
 
 [Slide deck](https://docs.google.com/presentation/d/1TfCrsBEgvyOQ1MGC7jBKTvyaelAYCZzl3udRjPlVmWg/edit?usp=sharing)
 
+https://github.com/thetirefire/example project which further illustrates usage of this project.
+
 ## Prerequisites
 
 - kubectl binary
