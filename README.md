@@ -10,7 +10,10 @@ Minimal embeddable Kubernetes-style apiserver that supports CustomResourceDefiti
 
 [Presentation/Demo for SIG API Machinery on October 7, 2020](https://www.youtube.com/watch?v=n1L5a09wWas)
 
-[Slide deck](https://docs.google.com/presentation/d/1TfCrsBEgvyOQ1MGC7jBKTvyaelAYCZzl3udRjPlVmWg/edit?usp=sharing)
+[First Slide deck](https://docs.google.com/presentation/d/1TfCrsBEgvyOQ1MGC7jBKTvyaelAYCZzl3udRjPlVmWg/edit?usp=sharing)
+
+[Slide deck from KubeCon CloudNativeCon Europe 2021](https://static.sched.com/hosted_files/kccnceu2021/79/From%20Tweet%20to%20BadIdea.pdf)
+
 
 ## Prerequisites
 
@@ -38,3 +41,13 @@ bin/badidea
 # username and password are ignored, but required for the command to complete
 kubectl --server https://localhost:6443 --insecure-skip-tls-verify --username=bad --password=idea <the thing>
 ```
+
+## What works
+
+* CRDs
+* Metrics (`wget --no-check-certificate https://localhost:6443/metrics`)
+
+## What needs work
+
+* [Namespaces](https://github.com/thetirefire/badidea/issues/3)
+* https://github.com/thetirefire/badidea/issues
